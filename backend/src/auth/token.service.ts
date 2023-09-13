@@ -3,33 +3,35 @@ import Redis from 'ioredis';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { JwtService } from '@nestjs/jwt';
 import { AuthPayload, TokenDto } from './auth.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TokenService {
   constructor(
     @InjectRedis() private readonly redis: Redis,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async generateToken(accountId: number): Promise<TokenDto> {
     const accessToken = this.jwtService.sign(
       { id: accountId },
       {
-        secret: 'secret',
-        expiresIn: '5m',
+        secret: this.configService.get('JWT_SECRET'),
+        expiresIn: +this.configService.get('ACCESS_TOKEN_EXP'),
       },
     );
     const refreshToken = this.jwtService.sign(
       { id: accountId },
       {
-        secret: 'secret',
-        expiresIn: '7d',
+        secret: this.configService.get('JWT_SECRET'),
+        expiresIn: +this.configService.get('REFRESH_TOKEN_EXP'),
       },
     );
 
     const key = `auth:${refreshToken}:${accountId}`;
     this.redis.set(key, 1, () => {
-      this.redis.expire(key, 7 * 24 * 60 * 60);
+      this.redis.expire(key, +this.configService.get('REFRESH_TOKEN_EXP'));
     });
 
     return {
@@ -40,7 +42,7 @@ export class TokenService {
 
   async revokeToken(refreshToken: string): Promise<void> {
     const payload = this.jwtService.verify(refreshToken, {
-      secret: 'secret',
+      secret: this.configService.get('JWT_SECRET'),
     });
     await this.redis.del(`auth:${refreshToken}:${payload.id}`);
   }
@@ -55,7 +57,7 @@ export class TokenService {
 
   async refreshToken(refreshToken: string): Promise<TokenDto> {
     const payload = this.jwtService.verify(refreshToken, {
-      secret: 'secret',
+      secret: this.configService.get('JWT_SECRET'),
     });
     const keys = await this.redis.keys(`auth:${refreshToken}:${payload.id}`);
     if (keys.length) {
@@ -69,7 +71,7 @@ export class TokenService {
 
   extractPayload(token: string): AuthPayload {
     return this.jwtService.verify(token, {
-      secret: 'secret',
+      secret: this.configService.get('JWT_SECRET'),
     });
   }
 }
