@@ -9,13 +9,24 @@ import {
   DialogTitle,
   TextField,
 } from "@mui/material";
+import { SubmitHandler, useForm } from "react-hook-form";
 
-type Props = {
-  onSubmit: (title: string, description: string) => void;
+type FormInputs = {
+  title: string;
+  description: string;
 };
 
-export const CreateTaskDialog = ({ onSubmit }: Props) => {
+type Props = {
+  onCreate: (title: string, description: string) => void;
+};
+
+export const CreateTaskDialog = ({ onCreate }: Props) => {
   const [open, setOpen] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormInputs>();
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -25,16 +36,9 @@ export const CreateTaskDialog = ({ onSubmit }: Props) => {
     setOpen(false);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const title = data.get("title") as string;
-    const description = data.get("description") as string;
-    console.log(title, description);
-    if (title && description) {
-      onSubmit(title, description);
-      setOpen(false);
-    }
+  const onSubmit: SubmitHandler<FormInputs> = (data) => {
+    onCreate(data.title, data.description);
+    setOpen(false);
   };
 
   return (
@@ -44,29 +48,37 @@ export const CreateTaskDialog = ({ onSubmit }: Props) => {
       </Button>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>New Task</DialogTitle>
-        <Box component="form" onSubmit={handleSubmit}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
             <TextField
               autoFocus
               required
               margin="dense"
               id="title"
-              name="title"
               label="Title"
               type="text"
               fullWidth
               variant="standard"
+              error={!!errors.title}
+              helperText={errors?.title?.message || ""}
+              {...register("title", {
+                required: "Title is required",
+              })}
             />
             <TextField
               autoFocus
               required
               margin="dense"
               id="description"
-              name="description"
               label="Description"
               type="text"
               fullWidth
               variant="standard"
+              error={!!errors.description}
+              helperText={errors?.description?.message || ""}
+              {...register("description", {
+                required: "Description is required",
+              })}
             />
           </DialogContent>
           <DialogActions>

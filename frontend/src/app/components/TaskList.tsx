@@ -73,7 +73,7 @@ export const TaskList = observer(() => {
               <SortIcon />
             ) : null}
           </Link>
-          <CreateTaskDialog onSubmit={tasks.create} />
+          <CreateTaskDialog onCreate={tasks.create} />
         </Box>
       </Box>
 

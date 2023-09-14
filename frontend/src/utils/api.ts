@@ -28,13 +28,39 @@ class Api {
     return Api.instance;
   }
 
-  async request(module: string, init?: RequestInit): Promise<any> {
-    return fetch(this.url + module, this.getFetchConfig(init)).then((res) => {
-      if (res.status === 401) {
-        return this.tryRefresh(module, init);
-      }
-      return res.json();
+  post(module: string, data: any, init?: RequestInit) {
+    return this.request(module, {
+      method: "POST",
+      body: JSON.stringify(data),
     });
+  }
+
+  put(module: string, data: any, init?: RequestInit) {
+    return this.request(module, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async request(module: string, init?: RequestInit): Promise<any> {
+    return fetch(this.url + module, this.getFetchConfig(init)).then(
+      async (res) => {
+        if (res.status === 401) {
+          return this.tryRefresh(module, init);
+        }
+
+        const isJson = res.headers
+          .get("content-type")
+          ?.includes("application/json");
+        const data = isJson ? await res.json() : null;
+
+        if (data.error) {
+          return Promise.reject(data);
+        }
+
+        return data;
+      },
+    );
   }
 
   private async tryRefresh(module: string, init?: RequestInit) {
